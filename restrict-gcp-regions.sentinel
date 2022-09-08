@@ -1,0 +1,16 @@
+import "tfconfig-functions" as config
+
+import "gcp-functions" as gcp
+
+allowed_regions = ["us-west1", "us-east1"]
+
+all_gcp_providers = config.find_providers_by_type("google")
+
+check_regions = gcp.validate_provider_in_allowed_regions(all_gcp_providers, allowed_regions)
+
+print(check_regions)
+
+
+main = rule {
+	check_regions
+}
