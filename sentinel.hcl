@@ -34,3 +34,7 @@ policy "restrict-ingress-firewall-source-ranges" {
     enforcement_level = "advisory"
 }
 
+policy "restrict-gcp-regions" {
+    source = "./restrict-gcp-regions.sentinel"
+    enforcement_level = "advisory"
+}
