@@ -19,18 +19,7 @@ find_resources_with_standard_labels = func(resource_types) {
   return resources
 }
 
-/*validate_provider_in_allowed_regions = func(p, regions) {
-    if "constant_value" in keys(p.google.config.region) {
-      if p.google.config.region.constant_value in regions {
-        # Found resource from region
-        return true
-      } else {
-        return false
-      }
-    }
-  return false
-}
-*/
+
 validate_provider_in_allowed_regions = func(p, regions) {
     if "constant_value" in keys(p.google.config.region) {
       if p.google.config.region.constant_value in regions {
