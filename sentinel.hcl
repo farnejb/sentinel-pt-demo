@@ -14,8 +14,8 @@ module "gcp-functions" {
     source = "./gcp-functions/gcp-functions.sentinel"
 }
 
-policy "enforce-mandatory-labels" {
-    source = "./enforce-mandatory-labels.sentinel"
+policy "enforce-mandatory-labels-cost_center" {
+    source = "./enforce-mandatory-labels-cost_center.sentinel"
     enforcement_level = "advisory"
 }
 
@@ -36,5 +36,10 @@ policy "restrict-ingress-firewall-source-ranges" {
 
 policy "restrict-gcp-regions" {
     source = "./restrict-gcp-regions.sentinel"
+    enforcement_level = "advisory"
+}
+
+policy "enforce-gcp-storage-bucket-encryption" {
+    source = "./enforce-gcp-storage-bucket-encryption.sentinel"
     enforcement_level = "advisory"
 }
