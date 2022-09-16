@@ -16,10 +16,13 @@ param resource_types default [
   "google_storage_bucket",
 ]
 
+param cost_center_list default [
+  "91170",
+]
+
 # List of mandatory labels
 param mandatory_labels default [
   "name",
-  "ttl",
   "owner",
 ]
 
@@ -33,8 +36,9 @@ violatingGCPResources =
       plan.filter_attribute_not_contains_list(allGCPResourcesWithStandardLabels,
                     "labels", mandatory_labels, true)
 
+CostCenterInfo = plan.filter_attribute_map_key_contains_items_not_in_list(allGCPResourcesWithStandardLabels, "labels", "cost-center", cost_center_list, true)
 
 # Main rule
 main = rule {
-  length(violatingGCPResources["messages"]) is 0
+  length(violatingGCPResources["messages"]) is 0 and length(CostCenterInfo["messages"]) is 0
 }

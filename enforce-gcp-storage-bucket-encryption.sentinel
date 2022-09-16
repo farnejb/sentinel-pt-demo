@@ -1,0 +1,33 @@
+import "tfplan/v2" as tfplan
+
+allStorageBuckets = filter tfplan.resource_changes as _, resource_changes {
+	resource_changes.type is "google_storage_bucket" and
+		resource_changes.mode is "managed" and
+		(resource_changes.change.actions contains "create" or
+			resource_changes.change.actions is ["update"])
+}
+
+deny_undefined_encryption = rule {
+	all allStorageBuckets as _, bucket {
+		keys(bucket.change.after_unknown) contains "encryption"
+	}
+}
+
+ensure_storage_bucket_encryption_is_enabled = rule when deny_undefined_encryption is true {
+	all allStorageBuckets as _, bucket {
+		bucket.change.after_unknown.encryption is not empty
+	}
+}
+
+// ---------------------------------------------------------
+// Category:    Storage
+// Provider:    hashicorp/google
+// Resource:    google_storage_bucket
+// Check:       encryption block is not empty
+// ---------------------------------------------------------
+// Ensure that encryption is enabled for Cloud storage buckets.
+// ---------------------------------------------------------
+main = rule {
+	deny_undefined_encryption and
+	ensure_storage_bucket_encryption_is_enabled
+}

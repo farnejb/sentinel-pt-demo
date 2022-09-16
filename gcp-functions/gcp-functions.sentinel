@@ -2,7 +2,8 @@
 
 ##### Imports #####
 import "tfplan/v2" as tfplan
-
+import "strings"
+import "types"
 ##### Functions #####
 
 ### find_resources_with_standard_labels ###
@@ -18,9 +19,7 @@ find_resources_with_standard_labels = func(resource_types) {
   return resources
 }
 
-validate_provider_in_allowed_regions = func(p, regions) {
-#  if "config" in keys(p) and "region" in keys(p.google.config) {
-   # provider has its own region
+/*validate_provider_in_allowed_regions = func(p, regions) {
     if "constant_value" in keys(p.google.config.region) {
       if p.google.config.region.constant_value in regions {
         # Found resource from region
@@ -30,4 +29,108 @@ validate_provider_in_allowed_regions = func(p, regions) {
       }
     }
   return false
+}
+*/
+validate_provider_in_allowed_regions = func(p, regions) {
+    if "constant_value" in keys(p.google.config.region) {
+      if p.google.config.region.constant_value in regions {
+        # Found resource from region
+        return true
+      } else {
+        return false
+      }
+    } else if "references" in keys(p.google.config.region) {
+      # Iterate over references in region
+      # Usually, there should only be one reference
+      for p.google.config.region.references as reference {
+        # Cross reference variables
+        # Note that this function does not handle other types of references
+        if strings.has_prefix(reference, "var.") {
+          variable_name = strings.split(reference, ".")[1]
+          if p.google.module_address is "" {
+            # Get root module variable from tfplan.variables
+            variable_value = tfplan.variables[variable_name].value
+            # Check type of variable
+            variable_type = types.type_of(variable_value)
+            if variable_type is "string" and variable_value in regions {
+              # Found resource from region
+              return true
+            } else if variable_type is "map" and
+                      "region" in keys(variable_value) and
+                      variable_value["region"] in regions {
+              # Found resource from region
+              return true
+            } // end variable_type check
+          } else {
+            # Get non-root module variable
+            # Could be value passed into variable by module call
+            # or be the default value of a variable in the module
+
+            # First find parent module
+            module_segments = strings.split(p.module_address, ".")
+            num_segments = length(module_segments)
+            parent_module = strings.join(module_segments[0:num_segments-2], ".")
+            current_module_name = module_segments[num_segments-1]
+
+            # Find module call that called current module
+            if parent_module is "" {
+              # parent module is root module
+              mc = tfconfig.module_calls[current_module_name]
+            } else {
+              # parent module is not root module
+              mc = tfconfig.module_calls[parent_module + ":" + current_module_name]
+            }
+
+            # Check if referenced variable was passed in the module call
+            if variable_name in keys(mc.config) {
+              mc_var = mc.config[variable_name]
+              if "constant_value" in keys(mc_var) {
+                if mc_var.constant_value in regions {
+                  # Found resource from region
+                  return true
+                } else {
+                  return false
+                }
+              } else if "references" in keys(mc_var) and parent_module is "" {
+                // Check root module variable references
+                for mc_var.references as mc_reference {
+                  if strings.has_prefix(mc_reference, "var.") {
+                    mc_variable_name = strings.split(mc_reference, ".")[1]
+                    mc_variable_value = tfplan.variables[mc_variable_name].value
+                    mc_variable_type = types.type_of(mc_variable_value)
+                    if mc_variable_type is "string" and mc_variable_value in regions {
+                      # Found resource from region
+                      return true
+                    } else if mc_variable_type is "map" and
+                              "region" in keys(mc_variable_value) and
+                              mc_variable_value["region"] in regions {
+                      # Found resource from region
+                      return true
+                    } // end mc_variable_type check
+                  } // end if mc_reference is a root module variable
+                } // end for mc_var.references
+              } // end constant_value or references in module call
+            } else {
+              # check default value of variable in current module
+              default_value = tfconfig.variables[variable_name].default
+              default_value_type = types.type_of(default_value)
+              if default_value_type is "string" and default_value in regions {
+                # Found resource from region
+                return true
+              } else if default_value_type is "map" and
+                      "region" in keys(default_value) and
+                      default_value["region"] in regions {
+                # Found resource from region
+                return true
+              }
+            } // end if matched variable in module config or default value
+          } // end else non-root module
+        } // end reference is a variable
+      } // end for references
+    } // end references
+
+
+  # If we did not already return true, then return false
+  return false
+
 }
